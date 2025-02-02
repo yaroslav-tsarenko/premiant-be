@@ -29,7 +29,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const port = 8080;
-const allowedOrigins = ['https://premiant-ltd.vercel.app', 'http://localhost:3000', 'https://www.premiant.ltd', 'https://premiant.ltd'];
+const allowedOrigins = ['https://premiant-ltd.vercel.app', 'https://www.premiant.ltd', 'https://premiant.ltd'];
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(cors({
@@ -92,37 +92,35 @@ wss.on('connection', (ws) => {
     ws.on('close', () => console.log('Client disconnected'));
 });
 
-const broadcastTotalBalance = async () => {
+const broadcastBalances = async () => {
     try {
-        const totalBalance = await TotalBalance.findOne();
+        const [totalBalance, users] = await Promise.all([
+            TotalBalance.findOne(),
+            User.find()
+        ]);
+
+        const messages = users.map(user => ({
+            userId: user._id,
+            tariffBalance: user.tariffBalance
+        }));
+
         if (totalBalance) {
-            wss.clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({ totalBalance: totalBalance.totalBalance }));
-                }
-            });
+            messages.push({ totalBalance: totalBalance.totalBalance });
         }
-    } catch (error) {
-        console.error('Error broadcasting total balance:', error);
-    }
-};
-const broadcastTariffBalance = async () => {
-    try {
-        const users = await User.find();
-        users.forEach(user => {
-            wss.clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({ userId: user._id, tariffBalance: user.tariffBalance }));
-                }
-            });
+
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                messages.forEach(message => {
+                    client.send(JSON.stringify(message));
+                });
+            }
         });
     } catch (error) {
-        console.error('Error broadcasting tariff balance:', error);
+        console.error('Error broadcasting balances:', error);
     }
 };
 
-setInterval(broadcastTariffBalance, 1000);
-setInterval(broadcastTotalBalance, 1000);
+setInterval(broadcastBalances, 1000);
 
 server.listen(port, () => {
     console.log(`Server running on port ${port}✅ `);
