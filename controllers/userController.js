@@ -128,6 +128,14 @@ const increaseUserBalancesByTarrif = async () => {
             'exclusive': 1.72
         };
 
+        const nextTariffThresholds = {
+            'start': 2000,
+            'comfort': 7000,
+            'premium': 15000,
+            'maximum': 40000,
+            'exclusive': 50000
+        };
+
         for (const user of users) {
             const dailyPercentage = tariffs[user.tariff];
             if (!dailyPercentage) continue;
@@ -136,8 +144,16 @@ const increaseUserBalancesByTarrif = async () => {
             const earnings = user.tariffBalance * perSecondPercentage;
 
             user.tariffBalance = +(user.tariffBalance + earnings).toFixed(5);
-            await user.save();
 
+            const nextThreshold = nextTariffThresholds[user.tariff];
+            if (user.tariffBalance >= nextThreshold) {
+                user.balance += user.tariffBalance;
+                user.tariffBalance = 0;
+                user.tariff = 'none';
+                console.log(`User ${user._id} reached the next tariff threshold. Transferred balance to main balance.`);
+            }
+
+            await user.save();
             console.log(`Updated user ${user._id}: new tariffBalance = ${user.tariffBalance}`);
         }
         console.log('User balances increased by tariff successfully');
