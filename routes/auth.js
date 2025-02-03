@@ -56,7 +56,7 @@ router.post('/register', validationSchemaRegistration, async (req, res) => {
             verificationCode,
             verificationCodeExpires: Date.now() + 3600000,
         });
-        sendEmail(email, 'Код для верификации PremiantLTD', `Для подтверждения личности нужно ввести этот код: ${verificationCode}`);
+        sendEmail(email, 'Verification code Premiant LTD', `For identity verification, enter this code: ${verificationCode}`);
         await newUser.save();
 
         setTimeout(() => {

@@ -69,7 +69,7 @@ const updateUser = async (req, res) => {
 };
 
 const updateUserTariff = async (req, res) => {
-    const { price } = req.body;
+    const {price} = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     try {
@@ -77,16 +77,16 @@ const updateUserTariff = async (req, res) => {
         const user = await User.findById(decoded.userId);
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({message: 'User not found'});
         }
 
         if (user.balance < price) {
-            return res.status(400).json({ message: 'Insufficient balance' });
+            return res.status(400).json({message: 'Insufficient balance'});
         }
 
         user.balance -= price;
         user.tariffBalance += price;
-
+        user.tariffFirstDeposit = price;
         const currentDate = new Date();
         let expirationDate;
 
@@ -110,10 +110,10 @@ const updateUserTariff = async (req, res) => {
         user.tariffExpirationDate = expirationDate;
 
         await user.save();
-        res.status(200).json({ message: 'Tariff updated successfully' });
+        res.status(200).json({message: 'Tariff updated successfully'});
     } catch (error) {
         console.error('Error updating tariff:', error);
-        res.status(500).json({ message: 'Server error', error });
+        res.status(500).json({message: 'Server error', error});
     }
 };
 
@@ -154,7 +154,7 @@ const updateUserBalance = async (req, res) => {
         const user = await User.findById(decoded.userId);
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({message: 'User not found'});
         }
 
         user.balance += user.tariffBalance;
@@ -162,10 +162,10 @@ const updateUserBalance = async (req, res) => {
         user.tariff = 'none';
 
         await user.save();
-        res.status(200).json({ message: 'Balance updated successfully' });
+        res.status(200).json({message: 'Balance updated successfully'});
     } catch (error) {
         console.error('Error updating balance:', error);
-        res.status(500).json({ message: 'Server error', error });
+        res.status(500).json({message: 'Server error', error});
     }
 };
 const getAllUsers = async (req, res) => {

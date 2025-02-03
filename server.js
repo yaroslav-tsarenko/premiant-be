@@ -29,7 +29,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const port = 8080;
-const allowedOrigins = ['https://premiant-ltd.vercel.app', 'https://www.premiant.ltd', 'https://premiant.ltd'];
+const allowedOrigins = ['https://premiant-ltd.vercel.app', 'https://www.premiant.ltd', 'https://premiant.ltd', 'http://localhost:3000'];
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(cors({

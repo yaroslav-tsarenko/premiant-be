@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
     earnings: { type: Number, default: 0 },
     tariffExpiresAt: { type: Date, default: Date.now },
     tariffBalance: { type: Number, default: 0 },
+    tariffFirstDeposit: {type: Number, default: 0},
     withdrawals: { type: Number, default: 0 },
     totalWithdrawals: { type: Number, default: 0 },
     totalDeposits: { type: Number, default: 0 },
