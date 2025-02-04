@@ -246,21 +246,8 @@ const requestPasswordReset = async (req, res) => {
 
         await sendEmail(
             user.email,
-            'Premiant LTD – Your Verification Code',
-            `Hello,
-
-Your verification code is: **${verificationCode}**
-
-Please enter this code to complete the process. The code will be valid for 15 minutes.
-
-This may be for email verification or password reset. If you did not request a password reset, please ignore this email. Your current password remains unchanged.
-
-Can't log in? — Click here https://www.premiant.ltd/login
-
-If you have any questions or need assistance, feel free to contact our support team.
-
-Best regards,
-Account Support Team Premiant LTD`
+            'Password reset verification code Premiant LTD',
+            `Verification code to change the password: ${verificationCode}`
         );
         res.status(200).json({message: 'Verification code sent to email'});
     } catch (error) {
