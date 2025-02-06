@@ -253,7 +253,7 @@ Please enter this code to complete the process. The code will be valid for 15 mi
 
 This may be for email verification or password reset. If you did not request a password reset, please ignore this email. Your current password remains unchanged.
 
-Can't log in? — Click here (и тут просто ссылку этап регистраци/входа на сайт)
+Can't log in? — Click here https://www.premiant.ltd/login
 
 If you have any questions or need assistance, feel free to contact our support team.
 
