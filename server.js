@@ -29,7 +29,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const port = 8080;
-const allowedOrigins = ['https://premiant-ltd.vercel.app', 'https://www.premiant.ltd', 'https://premiant.ltd', 'http://localhost:3000'];
+const allowedOrigins = ['https://premiant-ltd.vercel.app', 'https://www.premiant.ltd', 'https://premiant.ltd', "http://localhost:3000"];
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(cors({
@@ -66,15 +66,23 @@ cron.schedule('*/1 * * * *', () => {
     generateReferralCodes();
 });
 
-setInterval(() => {
-    console.log('Running updateUserBalances...⚙️');
-    increaseUserBalancesByTarrif();
-}, 1000);
+setInterval(async () => {
+    try {
+        console.log('Updating user balances... ⚙️');
+        await increaseUserBalancesByTarrif();
+    } catch (error) {
+        console.error('Error updating user balances:', error);
+    }
+}, 15000);
 
-setInterval(() => {
-    console.log('Running updateTotalBalance...⚙️');
-    updateTotalBalance();
-}, 1000);
+setInterval(async () => {
+    try {
+        console.log('Updating total balance... ⚙️');
+        await updateTotalBalance();
+    } catch (error) {
+        console.error('Error updating total balance:', error);
+    }
+}, 15000);
 
 app.use('/auth', authRoutes);
 app.use('/user', userRoutes);
@@ -92,35 +100,41 @@ wss.on('connection', (ws) => {
     ws.on('close', () => console.log('Client disconnected'));
 });
 
+let cachedBalances = null;
+let lastUpdated = 0;
+
 const broadcastBalances = async () => {
     try {
-        const [totalBalance, users] = await Promise.all([
-            TotalBalance.findOne(),
-            User.find()
-        ]);
+        const now = Date.now();
 
-        const messages = users.map(user => ({
-            userId: user._id,
-            tariffBalance: user.tariffBalance
-        }));
+        if (!cachedBalances || now - lastUpdated > 10000) {
+            const [totalBalance, users] = await Promise.all([
+                TotalBalance.findOne().lean(),
+                User.find().select('_id tariffBalance').lean(),
+            ]);
+            cachedBalances = {
+                users: users.map(user => ({
+                    userId: user._id,
+                    tariffBalance: user.tariffBalance,
+                })),
+                totalBalance: totalBalance ? totalBalance.totalBalance : 0,
+            };
 
-        if (totalBalance) {
-            messages.push({ totalBalance: totalBalance.totalBalance });
+            lastUpdated = now;
         }
 
-        wss.clients.forEach((client) => {
+        wss.clients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
-                messages.forEach(message => {
-                    client.send(JSON.stringify(message));
-                });
+                client.send(JSON.stringify(cachedBalances));
             }
         });
+
     } catch (error) {
         console.error('Error broadcasting balances:', error);
     }
 };
 
-setInterval(broadcastBalances, 1000);
+setInterval(broadcastBalances, 10000);
 
 server.listen(port, () => {
     console.log(`Server running on port ${port}✅ `);
