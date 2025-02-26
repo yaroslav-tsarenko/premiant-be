@@ -73,7 +73,7 @@ setInterval(async () => {
     } catch (error) {
         console.error('Error updating user balances:', error);
     }
-}, 15000);
+}, 5000);
 
 setInterval(async () => {
     try {
