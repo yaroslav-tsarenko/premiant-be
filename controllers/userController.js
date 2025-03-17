@@ -89,25 +89,29 @@ const updateUserTariff = async (req, res) => {
         user.tariffFirstDeposit = price;
         const currentDate = new Date();
         let expirationDate;
+        let remainingDays;
 
         if (user.tariffBalance >= 40000) {
             user.tariff = 'exclusive';
-            expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 6));
+            remainingDays = 6;
         } else if (user.tariffBalance >= 15000) {
             user.tariff = 'maximum';
-            expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 9));
+            remainingDays = 9;
         } else if (user.tariffBalance >= 7000) {
             user.tariff = 'premium';
-            expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 17));
+            remainingDays = 17;
         } else if (user.tariffBalance >= 2000) {
             user.tariff = 'comfort';
-            expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 24));
+            remainingDays = 24;
         } else if (user.tariffBalance >= 100) {
             user.tariff = 'start';
-            expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 28));
+            remainingDays = 28;
         }
 
+        expirationDate = new Date(currentDate.setDate(currentDate.getDate() + remainingDays));
         user.tariffExpirationDate = expirationDate;
+        user.remainingDays = remainingDays;
+        user.percentPerMinute = (100 / remainingDays / 24 / 60).toFixed(3);
 
         await user.save();
         res.status(200).json({message: 'Tariff updated successfully'});
@@ -136,7 +140,17 @@ const increaseUserBalancesByTarrif = async () => {
             'exclusive': 50000
         };
 
+        const percentPerMinuteIncrements = {
+            'start': 0.002,
+            'comfort': 0.003,
+            'premium': 0.004,
+            'maximum': 0.007,
+            'exclusive': 0.011
+        };
+
         for (const user of users) {
+            if (user.tariff === 'none') continue;
+
             const dailyPercentage = tariffs[user.tariff];
             if (!dailyPercentage) continue;
 
@@ -151,14 +165,39 @@ const increaseUserBalancesByTarrif = async () => {
                 user.tariffBalance = 0;
                 user.tariff = 'none';
                 console.log(`User ${user._id} reached the next tariff threshold. Transferred balance to main balance.`);
+            } else {
+                user.percentPerMinute += percentPerMinuteIncrements[user.tariff];
             }
 
             await user.save();
-            console.log(`Updated user ${user._id}: new tariffBalance = ${user.tariffBalance}`);
+            console.log(`Updated user ${user._id}: new tariffBalance = ${user.tariffBalance}, new percentPerMinute = ${user.percentPerMinute}`);
         }
         console.log('User balances increased by tariff successfully');
     } catch (error) {
         console.error('Error increasing user balances by tariff:', error);
+    }
+};
+
+const updateRemainingDays = async () => {
+    try {
+        const users = await User.find({tariff: {$ne: 'none'}});
+
+        const currentDate = new Date();
+
+        for (const user of users) {
+            const expirationDate = new Date(user.tariffExpirationDate);
+            const timeDiff = expirationDate.getTime() - currentDate.getTime();
+            const remainingDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+            if (remainingDays !== user.remainingDays) {
+                user.remainingDays = remainingDays;
+                await user.save();
+                console.log(`Updated user ${user._id}: new remainingDays = ${user.remainingDays}`);
+            }
+        }
+        console.log('Remaining days updated successfully');
+    } catch (error) {
+        console.error('Error updating remaining days:', error);
     }
 };
 
@@ -176,7 +215,8 @@ const updateUserBalance = async (req, res) => {
         user.balance += user.tariffBalance;
         user.tariffBalance = 0;
         user.tariff = 'none';
-
+        user.percentPerMinute = 0;
+        user.remainingDays = 0;
         await user.save();
         res.status(200).json({message: 'Balance updated successfully'});
     } catch (error) {
@@ -184,6 +224,7 @@ const updateUserBalance = async (req, res) => {
         res.status(500).json({message: 'Server error', error});
     }
 };
+
 const getAllUsers = async (req, res) => {
     try {
         const token = req.headers.authorization.split(' ')[1];
@@ -247,7 +288,9 @@ const requestPasswordReset = async (req, res) => {
         await sendEmail(
             user.email,
             'Premiant LTD – Your Verification Code',
-            `Your verification code is: **${verificationCode}**
+            `Hello,
+
+Your verification code is: **${verificationCode}**
 
 Please enter this code to complete the process. The code will be valid for 15 minutes.
 
@@ -258,7 +301,7 @@ Can't log in? — Click here https://www.premiant.ltd/login
 If you have any questions or need assistance, feel free to contact our support team.
 
 Best regards,
-Account Support Team Premiant LTD `
+Account Support Team Premiant LTD`
         );
         res.status(200).json({message: 'Verification code sent to email'});
     } catch (error) {
@@ -329,5 +372,6 @@ module.exports = {
     verifyCode,
     resetPassword,
     getAllUserDeposits,
-    getAllUserWithdrawals
+    getAllUserWithdrawals,
+    updateRemainingDays
 };

@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 const helmet = require('helmet');
-/*const rateLimit = require('express-rate-limit');*/
 const User = require('./models/User');
 const bodyParser = require('body-parser');
 const authRoutes = require('./routes/auth');
@@ -19,7 +18,7 @@ const withdrawRoutes = require('./routes/withdraw');
 const transaction = require('./routes/transaction');
 const cron = require('node-cron');
 const totalBalanceRoutes = require('./routes/totalBalance');
-const { increaseUserBalancesByTarrif } = require('./controllers/userController');
+const { increaseUserBalancesByTarrif, updateRemainingDays } = require('./controllers/userController');
 const { updateTotalBalance } = require('./controllers/totalBalanceController');
 const { updateActiveReferrals } = require('./controllers/referalController');
 const TotalBalance = require('./models/TotalBalance');
@@ -45,25 +44,27 @@ app.use(cors({
 
 app.use(helmet());
 
-/*const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 1000,
-});
-
-app.use(limiter);*/
-
 mongoose.connect(`mongodb+srv://yaroslavdev:1234567890@premiant.vpogw.mongodb.net/?retryWrites=true&w=majority&appName=premiant`, {
-    useNewUrlParser: true,
+useNewUrlParser: true,
     useUnifiedTopology: true,
 }).then(() => {
     console.log('MongoDB connected✅ ');
 }).catch(err => console.log(err));
 
-cron.schedule('*/1 * * * *', () => {
+cron.schedule('*/3 * * * *', () => {
     console.log('Running generateReferralCodes...⚙️');
     console.log('Running updateActiveReferrals...⚙️');
     updateActiveReferrals();
     generateReferralCodes();
+});
+
+cron.schedule('0 * * * *', async () => {
+    try {
+        console.log('Running updateRemainingDays... ⚙️');
+        await updateRemainingDays();
+    } catch (error) {
+        console.error('Error running updateRemainingDays:', error);
+    }
 });
 
 setInterval(async () => {
@@ -73,7 +74,7 @@ setInterval(async () => {
     } catch (error) {
         console.error('Error updating user balances:', error);
     }
-}, 5000);
+}, 15000);
 
 setInterval(async () => {
     try {
@@ -110,12 +111,13 @@ const broadcastBalances = async () => {
         if (!cachedBalances || now - lastUpdated > 10000) {
             const [totalBalance, users] = await Promise.all([
                 TotalBalance.findOne().lean(),
-                User.find().select('_id tariffBalance').lean(),
+                User.find().select('_id tariffBalance percentPerMinute').lean(),
             ]);
             cachedBalances = {
                 users: users.map(user => ({
                     userId: user._id,
                     tariffBalance: user.tariffBalance,
+                    percentPerMinute: user.percentPerMinute,
                 })),
                 totalBalance: totalBalance ? totalBalance.totalBalance : 0,
             };
