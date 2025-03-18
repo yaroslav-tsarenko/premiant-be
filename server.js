@@ -74,7 +74,7 @@ setInterval(async () => {
     } catch (error) {
         console.error('Error updating user balances:', error);
     }
-}, 15000);
+}, 60000);
 
 setInterval(async () => {
     try {
@@ -83,7 +83,7 @@ setInterval(async () => {
     } catch (error) {
         console.error('Error updating total balance:', error);
     }
-}, 15000);
+}, 60000);
 
 app.use('/auth', authRoutes);
 app.use('/user', userRoutes);
