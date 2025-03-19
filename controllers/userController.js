@@ -123,14 +123,9 @@ const updateUserTariff = async (req, res) => {
 
 const increaseUserBalancesByTarrif = async () => {
     try {
+        console.log(`🔄 Running balance update at ${new Date().toISOString()}`);
+
         const users = await User.find();
-        const tariffs = {
-            'start': 0.02,
-            'comfort': 0.0335,
-            'premium': 0.0567,
-            'maximum': 1.54,
-            'exclusive': 1.72
-        };
 
         const nextTariffThresholds = {
             'start': 2000,
@@ -148,31 +143,53 @@ const increaseUserBalancesByTarrif = async () => {
             'exclusive': 2.38889
         };
 
+        const bulkOps = [];
+
         for (const user of users) {
-            if (user.tariff === 'none') continue;
+            if (!user.tariff || user.tariff === 'none') continue;
 
             const earnings = fixedPerMinuteIncrements[user.tariff];
             if (!earnings) continue;
 
+            let newTariffBalance = Number((user.tariffBalance + earnings).toFixed(5));
+            let newBalance = user.balance;
+            let newTariff = user.tariff;
 
-            user.tariffBalance = +(user.tariffBalance + earnings).toFixed(5);
+            console.log(`User ${user._id} | Tariff: ${user.tariff} | Earnings: ${earnings} | New Balance: ${newTariffBalance}`);
 
-            const nextThreshold = nextTariffThresholds[user.tariff];
-            if (user.tariffBalance >= nextThreshold) {
-                user.balance += user.tariffBalance;
-                user.tariffBalance = 0;
-                user.tariff = 'none';
-                console.log(`User ${user._id} reached the next tariff threshold. Transferred balance to main balance.`);
+            if (newTariffBalance >= nextTariffThresholds[user.tariff]) {
+                newBalance += newTariffBalance;
+                newTariffBalance = 0;
+                newTariff = 'none';
+                console.log(`✅ User ${user._id} reached threshold. Balance moved to main account.`);
             }
 
-            await user.save();
-            console.log(`Updated user ${user._id}: new tariffBalance = ${user.tariffBalance}`);
+            bulkOps.push({
+                updateOne: {
+                    filter: { _id: user._id },
+                    update: {
+                        $set: {
+                            tariffBalance: newTariffBalance,
+                            balance: newBalance,
+                            tariff: newTariff
+                        }
+                    }
+                }
+            });
         }
-        console.log('User balances increased by tariff successfully');
+
+        if (bulkOps.length > 0) {
+            await User.bulkWrite(bulkOps);
+            console.log(`✅ Successfully updated ${bulkOps.length} users.`);
+        } else {
+            console.log(`⚠️ No users updated this cycle.`);
+        }
+
     } catch (error) {
-        console.error('Error increasing user balances by tariff:', error);
+        console.error('❌ Error increasing user balances by tariff:', error);
     }
 };
+
 
 
 const updateRemainingDays = async () => {
