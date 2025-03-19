@@ -140,23 +140,20 @@ const increaseUserBalancesByTarrif = async () => {
             'exclusive': 50000
         };
 
-        const percentPerMinuteIncrements = {
-            'start': 0.00001389,
-            'comfort': 0.00002326,
-            'premium': 0.00003938,
-            'maximum': 0.00107,
-            'exclusive': 0.00119
+        const fixedPerMinuteIncrements = {
+            'start': 0.02778,
+            'comfort': 0.04653,
+            'premium': 0.07875,
+            'maximum': 2.13889,
+            'exclusive': 2.38889
         };
-
 
         for (const user of users) {
             if (user.tariff === 'none') continue;
 
-            const dailyPercentage = tariffs[user.tariff];
-            if (!dailyPercentage) continue;
+            const earnings = fixedPerMinuteIncrements[user.tariff];
+            if (!earnings) continue;
 
-            const perSecondPercentage = dailyPercentage / (24 * 60 * 60);
-            const earnings = user.tariffBalance * perSecondPercentage;
 
             user.tariffBalance = +(user.tariffBalance + earnings).toFixed(5);
 
@@ -166,18 +163,17 @@ const increaseUserBalancesByTarrif = async () => {
                 user.tariffBalance = 0;
                 user.tariff = 'none';
                 console.log(`User ${user._id} reached the next tariff threshold. Transferred balance to main balance.`);
-            } else {
-                user.percentPerMinute += percentPerMinuteIncrements[user.tariff];
             }
 
             await user.save();
-            console.log(`Updated user ${user._id}: new tariffBalance = ${user.tariffBalance}, new percentPerMinute = ${user.percentPerMinute}`);
+            console.log(`Updated user ${user._id}: new tariffBalance = ${user.tariffBalance}`);
         }
         console.log('User balances increased by tariff successfully');
     } catch (error) {
         console.error('Error increasing user balances by tariff:', error);
     }
 };
+
 
 const updateRemainingDays = async () => {
     try {
