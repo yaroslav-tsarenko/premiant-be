@@ -141,12 +141,13 @@ const increaseUserBalancesByTarrif = async () => {
         };
 
         const percentPerMinuteIncrements = {
-            'start': 0.002,
-            'comfort': 0.003,
-            'premium': 0.004,
-            'maximum': 0.007,
-            'exclusive': 0.011
+            'start': 0.00001389,
+            'comfort': 0.00002326,
+            'premium': 0.00003938,
+            'maximum': 0.00107,
+            'exclusive': 0.00119
         };
+
 
         for (const user of users) {
             if (user.tariff === 'none') continue;
