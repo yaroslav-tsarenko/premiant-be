@@ -143,7 +143,7 @@ const increaseUserBalancesByTarrif = async () => {
             'exclusive': 2.38889
         };
 
-        const percentPerMinute = {
+        const percentPerMinuteIncrement = {
             'start': 0.0024801587301587,
             'comfort': 0.0028935185185,
             'premium': 0.0040849673,
@@ -156,12 +156,11 @@ const increaseUserBalancesByTarrif = async () => {
         for (const user of users) {
             if (!user.tariff || user.tariff === 'none') continue;
 
-            const earnings = fixedPerMinuteIncrements[user.tariff];
-            const percentPerMinuteEarning = percentPerMinute[user.tariff];
-            if (!earnings && !percentPerMinuteEarning) continue;
+            const earnings = fixedPerMinuteIncrements[user.tariff] || 0;
+            const percentIncrease = percentPerMinuteIncrement[user.tariff] || 0;
 
             let newTariffBalance = Number((user.tariffBalance + earnings).toFixed(5));
-            let newPercentPerMinute = Number((user.percentPerMinute + percentPerMinuteEarning).toFixed(3));
+            let newPercentPerMinute = Number((user.percentPerMinute + percentIncrease).toFixed(6)); // Більше знаків для точності
             let newBalance = user.balance;
             let newTariff = user.tariff;
 
@@ -200,6 +199,7 @@ const increaseUserBalancesByTarrif = async () => {
         console.error('❌ Error increasing user balances by tariff:', error);
     }
 };
+
 
 
 
