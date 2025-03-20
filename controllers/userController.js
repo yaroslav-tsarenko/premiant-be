@@ -143,19 +143,29 @@ const increaseUserBalancesByTarrif = async () => {
             'exclusive': 2.38889
         };
 
+        const percentPerMinute = {
+            'start': 0.0024801587301587,
+            'comfort': 0.0028935185185,
+            'premium': 0.0040849673,
+            'maximum': 0.00771604,
+            'exclusive': 0.0115740
+        };
+
         const bulkOps = [];
 
         for (const user of users) {
             if (!user.tariff || user.tariff === 'none') continue;
 
             const earnings = fixedPerMinuteIncrements[user.tariff];
-            if (!earnings) continue;
+            const percentPerMinuteEarning = percentPerMinute[user.tariff];
+            if (!earnings && !percentPerMinuteEarning) continue;
 
             let newTariffBalance = Number((user.tariffBalance + earnings).toFixed(5));
+            let newPercentPerMinute = Number((user.percentPerMinute + percentPerMinuteEarning).toFixed(3));
             let newBalance = user.balance;
             let newTariff = user.tariff;
 
-            console.log(`User ${user._id} | Tariff: ${user.tariff} | Earnings: ${earnings} | New Balance: ${newTariffBalance}`);
+            console.log(`User ${user._id} | Tariff: ${user.tariff} | Earnings: ${earnings} | New Balance: ${newTariffBalance} | New Percent Per Minute: ${newPercentPerMinute}`);
 
             if (newTariffBalance >= nextTariffThresholds[user.tariff]) {
                 newBalance += newTariffBalance;
@@ -171,7 +181,8 @@ const increaseUserBalancesByTarrif = async () => {
                         $set: {
                             tariffBalance: newTariffBalance,
                             balance: newBalance,
-                            tariff: newTariff
+                            tariff: newTariff,
+                            percentPerMinute: newPercentPerMinute
                         }
                     }
                 }

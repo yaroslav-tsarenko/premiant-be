@@ -67,23 +67,23 @@ cron.schedule('0 * * * *', async () => {
     }
 });
 
-setInterval(async () => {
+cron.schedule('* * * * *', async () => {
     try {
         console.log('Updating user balances... ⚙️');
         await increaseUserBalancesByTarrif();
     } catch (error) {
         console.error('Error updating user balances:', error);
     }
-}, 60000);
+});
 
-setInterval(async () => {
+cron.schedule('* * * * *', async () => {
     try {
         console.log('Updating total balance... ⚙️');
         await updateTotalBalance();
     } catch (error) {
         console.error('Error updating total balance:', error);
     }
-}, 60000);
+});
 
 app.use('/auth', authRoutes);
 app.use('/user', userRoutes);
