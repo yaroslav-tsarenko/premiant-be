@@ -101,43 +101,6 @@ wss.on('connection', (ws) => {
     ws.on('close', () => console.log('Client disconnected'));
 });
 
-let cachedBalances = null;
-let lastUpdated = 0;
-
-const broadcastBalances = async () => {
-    try {
-        const now = Date.now();
-
-        if (!cachedBalances || now - lastUpdated > 10000) {
-            const [totalBalance, users] = await Promise.all([
-                TotalBalance.findOne().lean(),
-                User.find().select('_id tariffBalance percentPerMinute').lean(),
-            ]);
-            cachedBalances = {
-                users: users.map(user => ({
-                    userId: user._id,
-                    tariffBalance: user.tariffBalance,
-                    percentPerMinute: user.percentPerMinute,
-                })),
-                totalBalance: totalBalance ? totalBalance.totalBalance : 0,
-            };
-
-            lastUpdated = now;
-        }
-
-        wss.clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(cachedBalances));
-            }
-        });
-
-    } catch (error) {
-        console.error('Error broadcasting balances:', error);
-    }
-};
-
-setInterval(broadcastBalances, 10000);
-
 server.listen(port, () => {
     console.log(`Server running on port ${port}✅ `);
     console.log(`Server's Frontend origins: ${allowedOrigins.join(', ')}✅ `);
