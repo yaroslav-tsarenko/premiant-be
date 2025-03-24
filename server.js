@@ -21,7 +21,6 @@ const totalBalanceRoutes = require('./routes/totalBalance');
 const { increaseUserBalancesByTarrif, updateRemainingDays } = require('./controllers/userController');
 const { updateTotalBalance } = require('./controllers/totalBalanceController');
 const { updateActiveReferrals } = require('./controllers/referalController');
-const TotalBalance = require('./models/TotalBalance');
 const generateReferralCodes = require('./utils/generateReferralCodes');
 
 const app = express();

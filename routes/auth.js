@@ -56,7 +56,21 @@ router.post('/register', validationSchemaRegistration, async (req, res) => {
             verificationCode,
             verificationCodeExpires: Date.now() + 3600000,
         });
-        sendEmail(email, 'Код для верификации PremiantLTD', `Для подтверждения личности нужно ввести этот код: ${verificationCode}`);
+        sendEmail(email, 'Premiant LTD – Your Verification Code',
+            `Hello,
+
+Your verification code is: **${verificationCode}**
+
+Please enter this code to complete the process. The code will be valid for 15 minutes.
+
+This may be for email verification or password reset. If you did not request a password reset, please ignore this email. Your current password remains unchanged.
+
+Can't log in? — Click here https://www.premiant.ltd/login
+
+If you have any questions or need assistance, feel free to contact our support team.
+
+Best regards,
+Account Support Team Premiant LTD`);
         await newUser.save();
 
         setTimeout(() => {
