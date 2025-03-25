@@ -127,6 +127,14 @@ const increaseUserBalancesByTarrif = async () => {
 
         const users = await User.find();
 
+        const tariffRates = {
+            'start': 0.02,
+            'comfort': 0.0335,
+            'premium': 0.0567,
+            'maximum': 1.54,
+            'exclusive': 1.72
+        };
+
         const nextTariffThresholds = {
             'start': 2000,
             'comfort': 7000,
@@ -135,42 +143,34 @@ const increaseUserBalancesByTarrif = async () => {
             'exclusive': 50000
         };
 
-        const fixedPerMinuteIncrements = {
-            'start': 0.02778,
-            'comfort': 0.04653,
-            'premium': 0.07875,
-            'maximum': 2.13889,
-            'exclusive': 2.38889
-        };
-
-        const percentPerMinuteIncrement = {
-            'start': 0.0024801587301587,
-            'comfort': 0.0028935185185,
-            'premium': 0.0040849673,
-            'maximum': 0.00771604,
-            'exclusive': 0.0115740
-        };
-
         const bulkOps = [];
 
         for (const user of users) {
             if (!user.tariff || user.tariff === 'none') continue;
+            if (!user.tariffExpiresAt || !user.tariffFirstDeposit) continue;
 
-            const earnings = fixedPerMinuteIncrements[user.tariff] || 0;
-            const percentIncrease = percentPerMinuteIncrement[user.tariff] || 0;
+            const ratePerDay = tariffRates[user.tariff];
+            if (!ratePerDay) continue;
 
-            let newTariffBalance = Number((user.tariffBalance + earnings).toFixed(5));
-            let newPercentPerMinute = Number((user.percentPerMinute + percentIncrease).toFixed(6)); // Більше знаків для точності
+            const ratePerHour = ratePerDay / 24;
+
+            const now = new Date();
+            const started = new Date(user.tariffExpiresAt);
+            const hoursPassed = Math.max(0, (now.getTime() - started.getTime()) / (1000 * 60 * 60));
+
+            const profit = user.tariffFirstDeposit * ratePerHour * hoursPassed;
+
+            const newTariffBalance = Number((user.tariffFirstDeposit + profit).toFixed(5));
+
             let newBalance = user.balance;
             let newTariff = user.tariff;
 
-            console.log(`User ${user._id} | Tariff: ${user.tariff} | Earnings: ${earnings} | New Balance: ${newTariffBalance} | New Percent Per Minute: ${newPercentPerMinute}`);
+            console.log(`🧮 User ${user._id} | Tariff: ${user.tariff} | Hours: ${hoursPassed.toFixed(2)} | Profit: ${profit.toFixed(2)} | New Tariff Balance: ${newTariffBalance}`);
 
             if (newTariffBalance >= nextTariffThresholds[user.tariff]) {
                 newBalance += newTariffBalance;
-                newTariffBalance = 0;
                 newTariff = 'none';
-                console.log(`✅ User ${user._id} reached threshold. Balance moved to main account.`);
+                console.log(`✅ User ${user._id} reached threshold. Moving to main balance.`);
             }
 
             bulkOps.push({
@@ -180,8 +180,7 @@ const increaseUserBalancesByTarrif = async () => {
                         $set: {
                             tariffBalance: newTariffBalance,
                             balance: newBalance,
-                            tariff: newTariff,
-                            percentPerMinute: newPercentPerMinute
+                            tariff: newTariff
                         }
                     }
                 }
@@ -199,8 +198,6 @@ const increaseUserBalancesByTarrif = async () => {
         console.error('❌ Error increasing user balances by tariff:', error);
     }
 };
-
-
 
 
 const updateRemainingDays = async () => {
