@@ -135,6 +135,14 @@ const increaseUserBalancesByTarrif = async () => {
             'exclusive': 1.72
         };
 
+        const percentPerMinuteByTariff = {
+            'start': 0.002,
+            'comfort': 0.003,
+            'premium': 0.0567,
+            'maximum': 1.54,
+            'exclusive': 1.72
+        };
+
         const nextTariffThresholds = {
             'start': 2000,
             'comfort': 7000,
@@ -161,11 +169,12 @@ const increaseUserBalancesByTarrif = async () => {
             const profit = user.tariffFirstDeposit * ratePerHour * hoursPassed;
 
             const newTariffBalance = Number((user.tariffFirstDeposit + profit).toFixed(5));
+            const newPercentPerMinute = Number((user.percentPerMinute + percentPerMinuteByTariff[user.tariff]).toFixed(3));
 
             let newBalance = user.balance;
             let newTariff = user.tariff;
 
-            console.log(`🧮 User ${user._id} | Tariff: ${user.tariff} | Hours: ${hoursPassed.toFixed(2)} | Profit: ${profit.toFixed(2)} | New Tariff Balance: ${newTariffBalance}`);
+            console.log(`🧮 User ${user._id} | Tariff: ${user.tariff} | Hours: ${hoursPassed.toFixed(2)} | Profit: ${profit.toFixed(2)} | New Tariff Balance: ${newTariffBalance} | New Percent Per Minute: ${newPercentPerMinute}`);
 
             if (newTariffBalance >= nextTariffThresholds[user.tariff]) {
                 newBalance += newTariffBalance;
@@ -180,7 +189,8 @@ const increaseUserBalancesByTarrif = async () => {
                         $set: {
                             tariffBalance: newTariffBalance,
                             balance: newBalance,
-                            tariff: newTariff
+                            tariff: newTariff,
+                            percentPerMinute: newPercentPerMinute
                         }
                     }
                 }
@@ -198,7 +208,6 @@ const increaseUserBalancesByTarrif = async () => {
         console.error('❌ Error increasing user balances by tariff:', error);
     }
 };
-
 
 const updateRemainingDays = async () => {
     try {
